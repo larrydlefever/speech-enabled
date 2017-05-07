@@ -66,6 +66,9 @@ public class testScript : MonoBehaviour {
 				  AudioInputStream convert=AudioSystem.getAudioInputStream(format,in);
 				  AudioSystem.write(convert,AudioFileFormat.Type.WAVE,output);
 				}
+				
+				NOTE: use "mdls" at cmdln, to check the attributes of a wav-file
+				      Audacity can be misleading: you load a 16-bit audio-file, but it indicates as 32-bit
 			*/
 			AudioClip voiceInputClip = AudioClip.Create("playRecordClip", clipSamples.Length, 1, 44100, false);
 			aud.clip = voiceInputClip;
