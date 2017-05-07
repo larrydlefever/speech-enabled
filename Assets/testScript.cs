@@ -1,6 +1,10 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
+using UnityEngine.Networking;
 using UnityEngine;
+using UnitySpeechToText.Utilities;
+
 
 public class testScript : MonoBehaviour {
 
@@ -49,12 +53,67 @@ public class testScript : MonoBehaviour {
 			float[] clipSamples = new float[lastSampleIdx];
 			System.Array.Copy(samples, clipSamples, clipSamples.Length);
 
-			aud.clip = AudioClip.Create("playRecordClip", clipSamples.Length, 1, 44100, false);
+			//FIXME: for Alexa, this needs to be: 16000 sample-rate; 16-bit "linear PCM"
+			// per: https://developer.amazon.com/public/solutions/alexa/alexa-voice-service/reference/speechrecognizer
+			// maybe less difficult on server-side (in Java):
+			// per: http://stackoverflow.com/questions/29905225/java-converting-mp3-to-wav-16-bit-mono
+			/*
+				import javax.sound.sampled.*;
+
+				public void changeBitrate(File source,File output){
+				  AudioFormat format=new AudioFormat(44100,16,1,true,true);
+				  AudioInputStream in=AudioSystem.getAudioInputStream(source);
+				  AudioInputStream convert=AudioSystem.getAudioInputStream(format,in);
+				  AudioSystem.write(convert,AudioFileFormat.Type.WAVE,output);
+				}
+			*/
+			AudioClip voiceInputClip = AudioClip.Create("playRecordClip", clipSamples.Length, 1, 44100, false);
+			aud.clip = voiceInputClip;
 			aud.clip.SetData(clipSamples, 0);
 
 			aud.Play();
 			recording = false;
 			Debug.Log("playing back ...");
+
+			//List<IMultipartFormSection> sections = new List<IMultipartFormSection>();
+			//MultipartFormFileSection fileSection = new MultipartFormFileSection("audio");
+			//fileSection.sectionName = "audio";
+
+			// HOWEVER, see the following regarding saving files on Android (first intended targeted platform:
+			//    http://stackoverflow.com/questions/10712520/android-saving-the-generated-qr-code-image-to-a-sd-card
+			//    "Environment.getExternalStorageDirectory()"
+			//    and
+			//    "<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>"
+			// might need to use such code, or similar
+
+			// public static string Save(string fileName, AudioClip clip, bool overwiteIfExists = false)
+			string wavFilePath = SavWav.Save("voiceInput.wav", voiceInputClip, true);
+			Debug.Log("stored voiceInputClip as: " + wavFilePath);
+
+			byte[] voiceInputFileBytes = System.IO.File.ReadAllBytes(wavFilePath);
+			Debug.Log("got voiceInputFileBytes: " + voiceInputFileBytes.Length);
+
+			//var byteArray = new byte[clipSamples.Length * 4];
+			//Buffer.BlockCopy(clipSamples, 0, byteArray, 0, byteArray.Length);
+
+			//fileSection.sectionData = voiceInputFileBytes;
+			//MultipartFormFileSection fileSection = new MultipartFormFileSection(voiceInputFileBytes);
+			//sections.Add(fileSection);
+
+			//Debug.Log("uploading ...");
+			//UnityWebRequest.Post("http://localhost:4567/audio", sections);
+			//Debug.Log("uploaded.");
+
+			WWWForm form = new WWWForm();
+			form.AddBinaryData("voiceInputUpload", voiceInputFileBytes, "voiceInput.wav", null);
+			WWW w = new WWW("http://localhost:4567/audio", form);
+			//yield return w;
+			if (!string.IsNullOrEmpty(w.error)) {
+				print(w.error);
+			}
+			else {
+				print("Finished Uploading audio-file");
+			}
 		}
 
 		// use Microphone.Start() to create a clip and set it on an AudioSource (?)
