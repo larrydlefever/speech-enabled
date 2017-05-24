@@ -4,15 +4,21 @@ using System.Collections.Generic;
 using UnityEngine.Networking;
 using UnityEngine;
 using UnitySpeechToText.Utilities;
+using UniWebServer;
 
 
-public class testScript : MonoBehaviour {
+public class testScript : MonoBehaviour, IWebResource {
 
 	bool recording;
 
-
 	// Use this for initialization
 	void Start () {
+
+		EmbeddedWebServerComponent srvr = GetComponent<EmbeddedWebServerComponent>();
+		srvr.AddResource("/authresponse", this);
+
+		Debug.Log("app starting ...");
+		Application.OpenURL("http://unity3d.com/");
 
 		recording = false;
 		AudioSource aud = GetComponent<AudioSource>();
@@ -23,7 +29,12 @@ public class testScript : MonoBehaviour {
 			Debug.Log("Name: " + device);
 		}
 	}
-	
+
+	public void HandleRequest(Request request, Response response) 
+	{
+		Debug.Log("got authresponse: " + request.uri.PathAndQuery);
+	}
+
 	// Update is called once per frame
 	void Update () {
 		
